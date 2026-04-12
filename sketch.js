@@ -86,16 +86,9 @@ const STAGE_POOLS = {
     "Milk Sample",
     "Foam Practice"
   ],
-  2: [
-    "Americano",
-    "Milk Sample",
-    "Foam Practice",
-    "Ice Practice",
-    "Syrup Practice",
-  ],
-  3: ["Latte", "Iced Coffee", "Syrup Coffee"],
-  4: ["Iced Latte", "Foam Latte", "Mocha Latte"],
-  5: ["Special Latte", "Iced Deluxe Latte"],
+  2: ["Latte", "Iced Coffee", "Syrup Coffee"],
+  3: ["Iced Latte", "Foam Latte", "Mocha Latte"],
+  4: ["Special Latte", "Iced Deluxe Latte"],
 };
 
 const STAGE_META = {
@@ -110,48 +103,39 @@ const STAGE_META = {
   },
   1: {
     label: "Level 1",
-    title: "Apprentice: Warm Up",
-    summary: "Put the basics together with gentle pressure.",
-    completeText: "Great job! You've mastered the basic station controls.",
+    title: "Foundations: Single-Step Rush",
+    summary: "Master basic station control with gentle pressure.",
+    completeText: "Good start. Basic station control is locked in.",
     targetOrders: 5,
     nextStage: 2,
     guideLabel: "Level 1 Tip",
   },
   2: {
     label: "Level 2",
-    title: "Foundations: Single-Step Rush",
-    summary: "Former Level 1, now shifted forward into the main run.",
-    completeText: "Good start. Basic station control is locked in.",
+    title: "Beginner: Two-Step Multitasking",
+    summary: "Manage your first real multitask drinks without losing flow.",
+    completeText: "You are handling multiple stations much better now.",
     targetOrders: 5,
     nextStage: 3,
     guideLabel: "Level 2 Tip",
   },
   3: {
     label: "Level 3",
-    title: "Beginner: Two-Step Multitasking",
-    summary: "Manage your first real multitask drinks without losing flow.",
-    completeText: "You are handling multiple stations much better now.",
+    title: "Intermediate: Three-Step Challenges",
+    summary: "More timing pressure, more movement, more coordination mistakes to avoid.",
+    completeText: "Strong work. Complex coordination is starting to look natural.",
     targetOrders: 5,
     nextStage: 4,
     guideLabel: "Level 3 Tip",
   },
   4: {
     label: "Level 4",
-    title: "Intermediate: Three-Step Challenges",
-    summary: "More timing pressure, more movement, more coordination mistakes to avoid.",
-    completeText: "Strong work. Complex coordination is starting to look natural.",
-    targetOrders: 5,
-    nextStage: 5,
-    guideLabel: "Level 4 Tip",
-  },
-  5: {
-    label: "Level 5",
     title: "Expert: Four-Step Mastery",
     summary: "Everything is active now. This is the full barista chaos test.",
     completeText: "Outstanding. You reached the highest level in the shift.",
     targetOrders: null,
     nextStage: null,
-    guideLabel: "Level 5 Tip",
+    guideLabel: "Level 4 Tip",
   },
 };
 
@@ -484,7 +468,7 @@ function resetGame() {
   stopAudioEngine();
   game = {
     state: STATES.IDLE,
-    stage: 2,
+    stage: 1,
     stateStartMs: millis(),
     roundStartMs: null,
     currentOrder: null,
@@ -605,17 +589,17 @@ function labelUnlockValue(v) {
   return `${v}`.charAt(0).toUpperCase() + `${v}`.slice(1);
 }
 
-function stageMeta(stage = game?.stage ?? 2) {
-  return STAGE_META[stage] || STAGE_META[2];
+function stageMeta(stage = game?.stage ?? 1) {
+  return STAGE_META[stage] || STAGE_META[1];
 }
 
-function isTutorialStage(stage = game?.stage ?? 2) {
+function isTutorialStage(stage = game?.stage ?? 1) {
   return stage === 0;
 }
 
 function startNormalRun() {
   game.mode = "normal";
-  game.stage = 2;
+  game.stage = 1;
   game.roundStartMs = millis();
   game.ordersThisLevel = 0;
   game.state = STATES.NEW_ORDER;
@@ -3147,7 +3131,7 @@ function drawOrderCard() {
 
 function drawGuidePanel() {
   let msg = "";
-  const stage = game.stage ?? 2;
+  const stage = game.stage ?? 1;
   if (game.state === STATES.IDLE) msg = "Waiting for customer...";
   if (
     game.state === STATES.TUTORIAL_RECOVERY &&
@@ -3475,7 +3459,7 @@ function drawGameOver() {
   textSize(20);
   textStyle(BOLD);
   text(
-    `Highest Level: ${stageMeta(game.levelAtTimeout || game.stage).label} / Level 5   |   Orders: ${game.ordersDone}   |   Final Score: ${floor(game.score)}`,
+    `Highest Level: ${stageMeta(game.levelAtTimeout || game.stage).label} / Level 4   |   Orders: ${game.ordersDone}   |   Final Score: ${floor(game.score)}`,
     width * 0.5,
     statsY + 28,
   );
