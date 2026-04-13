@@ -28,7 +28,7 @@ const RUSH_EVENT_DURATION_MS = 12000;
 const COMBO_MILESTONES = [3, 5, 8];
 
 const STATION_TASKS = {
-  coffee: { type: "hold", key: "E", keyName: "E", speed: 40 },
+  coffee: { type: "hold", key: "E", keyName: "E", speed: 60 },
   milk: { type: "tap", key: "T", keyName: "T", speed: 18, decay: 8 },
   foam: {
     type: "balance",
@@ -81,13 +81,9 @@ const STAGE_POOLS = {
     "Ice Practice",
     "Syrup Practice",
   ],
-  1: [
-    "Americano",
-    "Milk Sample",
-    "Foam Practice"
-  ],
-  2: ["Latte", "Iced Coffee", "Syrup Coffee"],
-  3: ["Iced Latte", "Foam Latte", "Mocha Latte"],
+  1: ["Americano", "Milk Sample", "Foam Practice"],
+  2: ["Latte", "Iced Coffee", "Syrup Coffee", "Americano", "Milk Sample"],
+  3: ["Iced Latte", "Foam Latte", "Mocha Latte", "Latte", "Iced Coffee"],
   4: ["Special Latte", "Iced Deluxe Latte"],
 };
 
@@ -95,7 +91,8 @@ const STAGE_META = {
   0: {
     label: "Level 0",
     title: "Tutorial: Guided Foundations",
-    summary: "A no-pressure walkthrough for single-step drinks and recovery basics.",
+    summary:
+      "A no-pressure walkthrough for single-step drinks and recovery basics.",
     completeText: "Tutorial complete. You are ready to enter the main shift.",
     targetOrders: 5,
     nextStage: 1,
@@ -122,8 +119,10 @@ const STAGE_META = {
   3: {
     label: "Level 3",
     title: "Intermediate: Three-Step Challenges",
-    summary: "More timing pressure, more movement, more coordination mistakes to avoid.",
-    completeText: "Strong work. Complex coordination is starting to look natural.",
+    summary:
+      "More timing pressure, more movement, more coordination mistakes to avoid.",
+    completeText:
+      "Strong work. Complex coordination is starting to look natural.",
     targetOrders: 5,
     nextStage: 4,
     guideLabel: "Level 3 Tip",
@@ -192,6 +191,19 @@ const POWERUPS = {
 const AUDIO_MASTER_GAIN = 0.48;
 const AUDIO_MUSIC_GAIN_MUL = 1.45;
 const AUDIO_SFX_GAIN_MUL = 1.65;
+const STAGE_SCORE_RULES = {
+  1: { order: 10, clear: 30 },
+  2: { order: 20, clear: 30 },
+  3: { order: 30, clear: 50 },
+  4: { order: 40, clear: 50 },
+};
+const FINAL_GRADE_THRESHOLDS = {
+  D: 150,
+  C: 250,
+  B: 350,
+  A: 450,
+  S: 600,
+};
 
 let game;
 let audioEngine = null,
@@ -877,7 +889,9 @@ function draw() {
   }
 
   const tutorialNoShake =
-    game.mode !== "practice" && isTutorialStage() && game.tutorialFinale?.active;
+    game.mode !== "practice" &&
+    isTutorialStage() &&
+    game.tutorialFinale?.active;
   let shakeMag = 0;
   if (!tutorialNoShake && (game.stress > 50 || game.tangleMeter > 50)) {
     // 只有超过 50 才计算震动，否则保持 0
@@ -1220,13 +1234,11 @@ function getRushModifiers() {
 
 function triggerComboMilestone() {
   if (!COMBO_MILESTONES.includes(game.combo)) return;
-  const bonus = game.combo * 8;
   const calm = game.combo >= 8 ? 14 : game.combo >= 5 ? 10 : 6;
-  game.score += bonus;
   game.tangleMeter = max(0, game.tangleMeter - calm);
   addParticles(width * 0.5, 122, color(244, 188, 121), 18);
   game.comboToast = {
-    text: `Combo x${game.combo}! +${bonus} pts, -${calm}% tangle`,
+    text: `Combo x${game.combo}! -${calm}% tangle`,
     untilMs: millis() + 1800,
   };
 }
@@ -1435,7 +1447,13 @@ function drawPracticeSelect() {
     textStyle(NORMAL);
     fill(101, 74, 54);
     textSize(14 * sz);
-    text(items[i].desc, cardX + 18 * sz, cardY + 84 * sz, cardW - 36 * sz, 40 * sz);
+    text(
+      items[i].desc,
+      cardX + 18 * sz,
+      cardY + 84 * sz,
+      cardW - 36 * sz,
+      40 * sz,
+    );
   }
 
   const footerY = y + h - 54 * sz;
@@ -1536,58 +1554,77 @@ function pointInRect(px, py, rectData) {
 }
 
 function drawLevelComplete() {
-  fill(15, 23, 45, 220);
+  // 1. Smooth, dark overlay backdrop
+  noStroke();
+  fill(10, 17, 35, 215);
   rect(0, 0, width, height);
 
-  const panelW = min(700, width * 0.8);
+  const panelW = min(720, width * 0.85);
   const panelH = 480;
   const panelX = width * 0.5 - panelW * 0.5;
   const panelY = height * 0.5 - panelH * 0.5;
 
-  setShadow(40, "rgba(0,0,0,0.6)");
-  fill(255, 255, 255, 248);
-  rect(panelX, panelY, panelW, panelH, 24);
-  clearShadow();
+  // 2. Main Panel with softer shadow
+  setShadow(50, "rgba(0, 5, 20, 0.4)"); 
+  fill(255, 255, 255, 250);
+  rect(panelX, panelY, panelW, panelH, 20);
+  clearShadow(); 
 
-  // Header background
-  fill(235, 242, 255);
-  rect(panelX, panelY, panelW, 100, 24, 24, 0, 0);
+  // 3. Header section - Crisp, soft icy blue
+  fill(244, 248, 255);
+  rect(panelX, panelY, panelW, 110, 20, 20, 0, 0);
 
-  // Title
-  fill(37, 52, 90);
+  // Subtle bottom border for the header separation
+  stroke(226, 236, 250);
+  strokeWeight(2);
+  line(panelX, panelY + 110, panelX + panelW, panelY + 110);
+  noStroke();
+
+  // 4. Title
+  fill(30, 41, 59); // Deep slate
   textAlign(CENTER, CENTER);
   textStyle(BOLD);
-  textSize(48);
+  textSize(42); // Slightly adjusted for elegance
   text(
     game.stage === 0
       ? "Tutorial Complete!"
       : `${stageMeta(game.stage).label} Complete!`,
     width * 0.5,
-    panelY + 50,
+    panelY + 55
   );
 
-  textStyle(NORMAL);
+  // 5. Level info section (Inner Card)
+  const infoY = panelY + 150;
+  fill(250, 252, 255);
+  stroke(226, 236, 250); // Subtle outline
+  strokeWeight(1.5);
+  rect(panelX + 40, infoY, panelW - 80, 130, 16);
+  noStroke();
 
-  // Level info section
-  const infoY = panelY + 130;
-  fill(246, 250, 255);
-  rect(panelX + 30, infoY, panelW - 60, 140, 14);
-
-  fill(37, 52, 90);
+  fill(30, 41, 59);
   textAlign(CENTER, CENTER);
-  textSize(24);
+  textSize(26);
   textStyle(BOLD);
-  text(stageMeta(game.stage).title, width * 0.5, infoY + 30);
+  text(stageMeta(game.stage).title, width * 0.5, infoY + 45);
 
   textStyle(NORMAL);
-  fill(90, 110, 150);
-  textSize(20);
-  text(stageMeta(game.stage).completeText, width * 0.5, infoY + 70);
+  fill(100, 116, 139); // Softer gray-blue for secondary text
+  textSize(18);
+  text(stageMeta(game.stage).completeText, width * 0.5, infoY + 85);
 
-  // Progress to next button
-  const buttonY = panelY + panelH - 80;
-  fill(87, 153, 222);
-  rect(panelX + panelW * 0.1, buttonY, panelW * 0.8, 50, 12); 
+  // 6. Action Button (Modern tactile look)
+  const buttonW = panelW * 0.75;
+  const buttonH = 56;
+  const buttonX = width * 0.5 - buttonW * 0.5;
+  const buttonY = panelY + panelH - 90;
+
+  // Button Shadow/Depth (Darker bottom edge)
+  fill(37, 99, 235); 
+  rect(buttonX, buttonY + 4, buttonW, buttonH, 14);
+
+  // Button Main Face (Vibrant blue)
+  fill(59, 130, 246); 
+  rect(buttonX, buttonY, buttonW, buttonH, 14);
 
   fill(255);
   textAlign(CENTER, CENTER);
@@ -1602,7 +1639,7 @@ function drawLevelComplete() {
       ? `${actionText} to Continue to ${stageMeta(game.nextStage).label}`
       : `${actionText} to Continue`,
     width * 0.5,
-    buttonY + 25,
+    buttonY + buttonH * 0.5 // Perfectly centered in the button
   );
 }
 
@@ -1728,7 +1765,8 @@ function updateState() {
     !game.guidePopup.open &&
     game.currentOrder
   ) {
-    if (game.state === STATES.ARM_CONTROL) maybeOpenLevelOneGuide(currentStep());
+    if (game.state === STATES.ARM_CONTROL)
+      maybeOpenLevelOneGuide(currentStep());
     if (game.state === STATES.SERVE_DRINK) maybeOpenLevelOneGuide("serve");
   }
 
@@ -1748,7 +1786,11 @@ function updateState() {
       game.state = STATES.ARM_CONTROL;
       game.stateStartMs = millis();
       // Start the shift timer once; do not reset between levels/orders.
-      if (game.mode !== "practice" && !isTutorialStage() && !game.roundStartMs) {
+      if (
+        game.mode !== "practice" &&
+        !isTutorialStage() &&
+        !game.roundStartMs
+      ) {
         game.roundStartMs = millis();
       }
       break;
@@ -1809,7 +1851,7 @@ function createOrder() {
     game.hoverStation = null;
     return;
   }
-  const pool = STAGE_POOLS[game.stage] || [];
+  const pool = getStageOrderPool(game.stage);
   const stageKey = `${game.stage}`;
   if (!game.pendingDrinksByStage) game.pendingDrinksByStage = {};
   if (!Array.isArray(game.pendingDrinksByStage[stageKey]))
@@ -1820,10 +1862,12 @@ function createOrder() {
     game.pendingDrinksByStage[stageKey] = shuffle([...pool], true);
   }
   const queue = game.pendingDrinksByStage[stageKey];
+  ensureOrderVariety(queue, game.lastOrderSignature);
   if (queue.length > 1) {
     const firstSignature = orderSignature(queue[0]);
     const swapIndex = queue.findIndex(
-      (d) => d !== game.lastDrink && orderSignature(d) !== game.lastOrderSignature,
+      (d) =>
+        d !== game.lastDrink && orderSignature(d) !== game.lastOrderSignature,
     );
     const canImproveVariety =
       queue[0] === game.lastDrink || firstSignature === game.lastOrderSignature;
@@ -1865,9 +1909,47 @@ function createOrder() {
   game.hoverStation = null;
 }
 
+function getStageOrderPool(stage) {
+  const basePool = STAGE_POOLS[stage] || [];
+  const targetIngredientCount = constrain(stage, 1, 4);
+  const exactMatchPool = basePool.filter(
+    (drink) => (RECIPES[drink] || []).length === targetIngredientCount,
+  );
+  return exactMatchPool.length > 0 ? exactMatchPool : basePool;
+}
+
 function orderSignature(drink) {
   const steps = [...(RECIPES[drink] || [])].sort();
   return steps.join("|");
+}
+
+function ensureOrderVariety(queue, lastOrderSignature) {
+  if (!queue || queue.length < 2) return;
+
+  const signatures = queue.map(orderSignature);
+  for (let i = 0; i < signatures.length - 1; i++) {
+    if (signatures[i] === signatures[i + 1]) {
+      const swapIndex = signatures.findIndex(
+        (sig, j) => j > i + 1 && sig !== signatures[i],
+      );
+      if (swapIndex > 0) {
+        [queue[i + 1], queue[swapIndex]] = [queue[swapIndex], queue[i + 1]];
+        [signatures[i + 1], signatures[swapIndex]] = [
+          signatures[swapIndex],
+          signatures[i + 1],
+        ];
+      }
+    }
+  }
+
+  if (lastOrderSignature && signatures[0] === lastOrderSignature) {
+    const swapIndex = signatures.findIndex(
+      (sig, j) => j > 0 && sig !== lastOrderSignature,
+    );
+    if (swapIndex > 0) {
+      [queue[0], queue[swapIndex]] = [queue[swapIndex], queue[0]];
+    }
+  }
 }
 
 function updateTasks() {
@@ -1916,8 +1998,7 @@ function updateTasks() {
           task.progress - task.speed * 0.6 * stressPenalty * dt,
         );
       }
-    } 
-    else if (task.type === "rhythm") {
+    } else if (task.type === "rhythm") {
       // 压力大时，节拍会变得不稳定（稍微加快）
       task.timer += dt * 1000 * map(game.stress, 0, 100, 1.0, 1.4);
       if (task.timer > task.beatMs) {
@@ -1982,11 +2063,9 @@ function updateArmReach() {
           playSfx("select");
         }
       } else {
-        const cmods = getCustomerMods();
         game.mistakes += 1;
         game.wrongStationHits += 1;
-        game.score = max(0, game.score - floor(5 * cmods.penaltyMul));
-        addTangle(arm.activeStation, 8 * cmods.penaltyMul);
+        addTangle(arm.activeStation, 8);
         const s = station(arm.activeStation);
         if (s) addParticles(s.x, s.y, color(246, 149, 128), 8);
         arm.activeStation = null;
@@ -2007,19 +2086,8 @@ function releaseAllArms() {
 
 function completeServeDrink() {
   if (!game.serveArmChosen) return;
-  const cmods = getCustomerMods();
-  const timeTaken = (millis() - game.currentOrder.createdMs) / 1000;
-  const tangleDelta = game.tangles - game.currentOrder.startTangles;
-  const wrongDelta = game.wrongStationHits - game.currentOrder.startWrongHits;
-  const serveScore = floor(
-    100 -
-      timeTaken * 1.8 -
-      tangleDelta * 10 * cmods.penaltyMul -
-      wrongDelta * 2 * cmods.penaltyMul,
-  );
-  const rushBonus =
-    timeTaken < cmods.speedWindowSec ? 20 * cmods.speedBonusMul : 0;
-  game.score += floor((max(25, serveScore) + rushBonus) * cmods.scoreMul);
+  const scoreRule = getStageScoreRule(game.stage);
+  game.score += scoreRule.order;
   game.ordersDone += 1;
   game.ordersThisLevel += 1;
   game.serveArmChosen = false;
@@ -2040,6 +2108,7 @@ function completeServeDrink() {
     currentStageMeta.nextStage !== null &&
     game.ordersThisLevel >= currentStageMeta.targetOrders
   ) {
+    game.score += scoreRule.clear;
     if (isTutorialStage()) {
       startTutorialFinale();
     } else {
@@ -2056,10 +2125,9 @@ function completeServeDrink() {
 
 function failStep() {
   if (game.mode !== "practice" && isTutorialStage()) return;
-  const cmods = getCustomerMods();
   game.tangles += 1;
   game.mistakes += 1;
-  game.score = max(0, game.score - floor(18 * cmods.penaltyMul));
+  game.score = max(0, game.score - 5);
   game.combo = 0;
   playSfx("fail");
   releaseAllArms();
@@ -2067,11 +2135,7 @@ function failStep() {
   game.untangleProgress = 0;
   game.state = STATES.TANGLED;
   game.stateStartMs = millis();
-  game.tangleMeter = constrain(
-    game.tangleMeter + 20 * cmods.penaltyMul,
-    0,
-    100,
-  );
+  game.tangleMeter = constrain(game.tangleMeter + 20, 0, 100);
   game.stress = constrain(game.stress + 14, 0, 100);
 }
 
@@ -2101,11 +2165,13 @@ function updateUntangleState() {
   game.untangleProgress = max(0, game.untangleProgress - 15 * dt);
 
   if (game.untangleProgress >= 100) {
-
     game.tangleMeter = 30;
     game.lockedArm = null;
-    releaseAllArms(); 
-    if (game.tutorialFinale?.active && game.tutorialFinale.phase === "untangle") {
+    releaseAllArms();
+    if (
+      game.tutorialFinale?.active &&
+      game.tutorialFinale.phase === "untangle"
+    ) {
       finishTutorialFinale();
     } else {
       game.state = STATES.ARM_CONTROL;
@@ -2125,15 +2191,15 @@ function updateStress() {
 
   // 1. 基础压力：激活的任务越多，章鱼越慌
   const activeCount = Object.keys(game.activeTasks).length;
-  const multitaskFactor = activeCount * 12; // 每个任务每秒提供 12 点压力潜力
+  const multitaskFactor = activeCount * 8; // 每个任务每秒提供更温和的压力
 
   // 2. 订单耗时压力
   const orderElapsed = (millis() - game.currentOrder.createdMs) / 1000;
-  const timeFactor = orderElapsed > 12 ? (orderElapsed - 12) * 5 : 0;
+  const timeFactor = orderElapsed > 14 ? (orderElapsed - 14) * 4 : 0;
 
   // 3. 更新 Stress 值
   game.stress = constrain(
-    game.stress + (multitaskFactor + timeFactor) * dt * 0.4,
+    game.stress + (multitaskFactor + timeFactor) * dt * 0.3,
     0,
     100,
   );
@@ -2141,7 +2207,7 @@ function updateStress() {
   // --- 核心逻辑：压力如何转化为 Tangle ---
   // 当 Stress 超过 40，Tangle 进度条会像漏水一样自动上涨
   if (game.stress > 40) {
-    const tangleGain = map(game.stress, 40, 100, 5, 20); // 压力满载时每秒涨 20%
+    const tangleGain = map(game.stress, 40, 100, 4, 16); // 压力满载时更慢增长
     game.tangleMeter = constrain(game.tangleMeter + tangleGain * dt, 0, 100);
   }
 }
@@ -2188,7 +2254,7 @@ function checkTentacleCrossing() {
 function triggerPhysicalTangle() {
   if (game.mode !== "practice" && isTutorialStage()) return;
   game.tangles += 1;
-  game.score = max(0, game.score - 15);
+  game.score = max(0, game.score - 5);
   game.stress = constrain(game.stress + 20, 0, 100);
   game.tangleMeter = 100; // 瞬间爆表
   playSfx("fail");
@@ -2205,7 +2271,7 @@ function triggerPhysicalTangle() {
 function keyPressed() {
   game.noInputSince = millis();
   ensureAudioUnlocked();
-  
+
   // 全局 ESC 退出处理
   if (keyCode === ESCAPE) {
     if (game.guidePopup && game.guidePopup.open) {
@@ -2224,12 +2290,13 @@ function keyPressed() {
     }
     return false;
   }
-  
+
   if (game.state === STATES.LEVEL_COMPLETE) {
     // Prevent accidental spacebar skipping if coming from tutorial untangle
-    const isValidKey = game.stage === 0 
-      ? (keyCode === ENTER) 
-      : (key === " " || keyCode === ENTER || key.toUpperCase() === "C");
+    const isValidKey =
+      game.stage === 0
+        ? keyCode === ENTER
+        : key === " " || keyCode === ENTER || key.toUpperCase() === "C";
 
     if (isValidKey) {
       if (game.nextStage) {
@@ -2241,7 +2308,7 @@ function keyPressed() {
     }
     return false;
   }
-  
+
   if (game.state === STATES.TRANSITION && (key === " " || keyCode === ENTER)) {
     game.state = STATES.HOW_TO_PLAY;
     game.stateStartMs = millis();
@@ -2330,7 +2397,7 @@ function keyPressed() {
       ) {
         const pushPower = task.push * map(game.stress, 0, 100, 1.0, 1.4);
         task.marker = min(100, task.marker + pushPower);
-        playTone(400, 0.05, "sine", 0.01); 
+        playTone(400, 0.05, "sine", 0.01);
       } else if (task.type === "alternate") {
         if (keyCode === 88 || keyCode === 67) {
           const pressedStr = keyCode === 88 ? "X" : "C";
@@ -2341,7 +2408,7 @@ function keyPressed() {
           }
         }
       } else if (task.type === "rhythm" && (k === task.key || key === " ")) {
-        const diff = min(task.timer, abs(task.beatMs - task.timer)); 
+        const diff = min(task.timer, abs(task.beatMs - task.timer));
         if (diff <= task.windowMs) {
           task.progress = min(100, task.progress + task.speed);
           task.timer = 0;
@@ -2626,8 +2693,8 @@ function drawStations() {
     const required = requiredSteps.includes(name);
     const sz = sceneScale();
 
-    const cardW = 185 * sz;
-    const cardH = 175 * sz;
+    const cardW = name === "serve" ? 170 * sz : 185 * sz;
+    const cardH = name === "serve" ? 160 * sz : 175 * sz;
     const cardX = s.x - cardW * 0.5;
     const cardY = s.y - cardH * 0.5;
 
@@ -3047,7 +3114,6 @@ function drawTangleBar(x, y, w, h) {
   textStyle(NORMAL);
   text(`${floor(game.tangleMeter)}%`, x + w - 20 * sz, y + 25 * sz);
 
-
   const bx = x + 20 * sz,
     by = y + 42 * sz,
     bw = w - 40 * sz,
@@ -3059,9 +3125,9 @@ function drawTangleBar(x, y, w, h) {
   rect(bx, by, bw * t, bh, 999);
 
   fill(120, 90, 70);
-  textSize(15 * sz); 
+  textSize(15 * sz);
   textAlign(LEFT, CENTER);
-  noStroke(); 
+  noStroke();
   text("80%+ locks one arm | hold R to calm", x + 20 * sz, y + 75 * sz);
 }
 
@@ -3072,7 +3138,7 @@ function drawOrderCard() {
   const x = 25 * sz;
   const y = 25 * sz;
   const w = 380 * sz;
-  const h = (180 + stepsCount * 45) * sz; 
+  const h = (180 + stepsCount * 45) * sz;
 
   setShadow(15, "rgba(66,42,22,0.18)");
   stroke(180, 140, 100);
@@ -3154,13 +3220,13 @@ function drawGuidePanel() {
   if (!msg) return;
 
   const sz = sceneScale();
-  
+
   // 测量文字长度自适应宽度
   textSize(stage === 0 ? 18 * sz : 17 * sz);
   textStyle(BOLD);
   const textW = textWidth(msg);
-  const w = textW + (80 * sz); // 增加足够的安全内边距
-  
+  const w = textW + 80 * sz; // 增加足够的安全内边距
+
   const h = 55 * sz;
   const x = width * 0.5 - w * 0.5;
   const y = 15 * sz;
@@ -3441,7 +3507,9 @@ function drawGameOver() {
         ? color(75, 192, 118)
         : grade === "B"
           ? color(87, 153, 222)
-          : color(222, 91, 96),
+          : grade === "C"
+            ? color(222, 91, 96)
+            : color(129, 101, 88),
   );
   ellipse(0, 0, 118, 118);
   fill(255);
@@ -3472,15 +3540,29 @@ function drawGameOver() {
     statsY + 62,
   );
   const scaleMin = 0;
-  const scaleMax = 900;
+  const scaleMax = FINAL_GRADE_THRESHOLDS.S;
   const scaleX = statsX + 28;
   const scaleY = statsY + 95;
   const scaleW = statsW - 56;
   const scoreClamped = constrain(rankScore, scaleMin, scaleMax);
-  const markerX = map(scoreClamped, scaleMin, scaleMax, scaleX, scaleX + scaleW);
-  const thresholds = [0, 360, 560, 760, 900];
-  const labels = ["C", "B", "A", "S"];
+  const markerX = map(
+    scoreClamped,
+    scaleMin,
+    scaleMax,
+    scaleX,
+    scaleX + scaleW,
+  );
+  const thresholds = [
+    0,
+    FINAL_GRADE_THRESHOLDS.D,
+    FINAL_GRADE_THRESHOLDS.C,
+    FINAL_GRADE_THRESHOLDS.B,
+    FINAL_GRADE_THRESHOLDS.A,
+    FINAL_GRADE_THRESHOLDS.S,
+  ];
+  const labels = ["D", "C", "B", "A", "S"];
   const segmentColors = [
+    color(129, 101, 88),
     color(222, 91, 96),
     color(87, 153, 222),
     color(75, 192, 118),
@@ -3501,14 +3583,30 @@ function drawGameOver() {
       scaleX + scaleW,
     );
     fill(segmentColors[i]);
-    rect(sx, scaleY - 6, ex - sx, 12, i === 0 ? 999 : 0, i === 0 ? 999 : 0, i === labels.length - 1 ? 999 : 0, i === labels.length - 1 ? 999 : 0);
+    rect(
+      sx,
+      scaleY - 6,
+      ex - sx,
+      12,
+      i === 0 ? 999 : 0,
+      i === 0 ? 999 : 0,
+      i === labels.length - 1 ? 999 : 0,
+      i === labels.length - 1 ? 999 : 0,
+    );
     fill(55, 72, 108);
     textSize(11);
     textStyle(BOLD);
     text(labels[i], (sx + ex) * 0.5, scaleY + 17);
   }
   fill(37, 52, 90);
-  triangle(markerX, scaleY - 16, markerX - 7, scaleY - 3, markerX + 7, scaleY - 3);
+  triangle(
+    markerX,
+    scaleY - 16,
+    markerX - 7,
+    scaleY - 3,
+    markerX + 7,
+    scaleY - 3,
+  );
   textSize(12);
   textStyle(NORMAL);
   textAlign(RIGHT, CENTER);
@@ -3527,27 +3625,22 @@ function drawGameOver() {
   if (profile) {
     fill(70, 92, 134);
     text(
-      `Best Run  Score ${profile.bestScore}  |  Orders ${profile.bestOrders}`,
-      statsX + 16,
-      progressY + 40,
-    );
-    text(
       `Loadout: ${labelUnlockValue(profile.selected.hat)} | ${labelUnlockValue(profile.selected.cupSkin)} | ${labelUnlockValue(profile.selected.stationTheme)} | ${labelUnlockValue(profile.selected.soundPack)}`,
       statsX + 16,
-      progressY + 62,
+      progressY + 40,
       statsW - 32,
       40,
     );
   }
   fill(78, 104, 58);
   textStyle(BOLD);
-  text("New Unlocks:", statsX + 16, progressY + 92);
+  text("New Unlocks:", statsX + 16, progressY + 78);
   textStyle(NORMAL);
   const unlockText =
     game.newUnlocks && game.newUnlocks.length
       ? game.newUnlocks.join(" | ")
       : "No new unlocks this round.";
-  text(unlockText, statsX + 126, progressY + 92, statsW - 142, 42);
+  text(unlockText, statsX + 126, progressY + 78, statsW - 142, 42);
   textAlign(CENTER, CENTER);
   const cycleButtons = gameOverCycleButtons();
   for (const b of cycleButtons) {
@@ -3596,14 +3689,19 @@ function finalRankScore() {
 }
 
 function finalGradeFromScore(score) {
-  if (score > 760) return "S";
-  if (score > 560) return "A";
-  if (score > 360) return "B";
-  return "C";
+  if (score >= FINAL_GRADE_THRESHOLDS.S) return "S";
+  if (score >= FINAL_GRADE_THRESHOLDS.A) return "A";
+  if (score >= FINAL_GRADE_THRESHOLDS.B) return "B";
+  if (score >= FINAL_GRADE_THRESHOLDS.C) return "C";
+  return "D";
 }
 
 function finalGrade() {
   return finalGradeFromScore(finalRankScore());
+}
+
+function getStageScoreRule(stage) {
+  return STAGE_SCORE_RULES[stage] || { order: 0, clear: 0 };
 }
 
 function labelStep(step) {
@@ -3701,7 +3799,6 @@ function maybeOpenLevelOneGuide(step) {
   if (game.seenGuides?.[step]) return;
   game.seenGuides[step] = true;
   game.guidePopup = { open: true, step, openedMs: millis() };
-  
 }
 
 function levelOneGuideContent(step) {
@@ -3819,7 +3916,12 @@ function drawChallengeGuidePopup() {
   rect(p.x, p.y, p.w, p.h, 22);
   clearShadow();
 
-  const headerGrad = drawingContext.createLinearGradient(p.x, p.y, p.x + p.w, p.y);
+  const headerGrad = drawingContext.createLinearGradient(
+    p.x,
+    p.y,
+    p.x + p.w,
+    p.y,
+  );
   headerGrad.addColorStop(0, "#F3E4C9");
   headerGrad.addColorStop(1, "#E9D5B4");
   drawingContext.fillStyle = headerGrad;
@@ -3853,7 +3955,8 @@ function drawChallengeGuidePopup() {
   }
 
   const b = guideCloseButtonRect();
-  const hover = mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h;
+  const hover =
+    mouseX > b.x && mouseX < b.x + b.w && mouseY > b.y && mouseY < b.y + b.h;
   fill(hover ? color(115, 185, 118) : color(98, 170, 104));
   rect(b.x, b.y, b.w, b.h, 10);
   fill(255);
@@ -3865,7 +3968,11 @@ function drawChallengeGuidePopup() {
   fill(122, 90, 62);
   textStyle(NORMAL);
   textSize(15);
-  text("Press ENTER / SPACE / ESC / C to close", p.x + p.w * 0.5, p.y + p.h - 14);
+  text(
+    "Press ENTER / SPACE / ESC / C to close",
+    p.x + p.w * 0.5,
+    p.y + p.h - 14,
+  );
 }
 
 function closeChallengeGuide() {
