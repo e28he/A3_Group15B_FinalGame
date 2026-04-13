@@ -2,7 +2,7 @@
 
 2. 15B
 
-3. Our mid-term game explores Dyspraxia, a condition that affects physical coordination and motor planning. Instead of making a traditional educational game, we designed an entertainment experience where the gameplay mechanics simulate the feeling of managing multiple physical actions at once.
+3. Our game explores Dyspraxia, a condition that affects physical coordination and motor planning. Instead of making a traditional educational game, we designed an entertainment experience where the gameplay mechanics simulate the feeling of managing multiple physical actions at once.
 In the game, you play as a small octopus barista managing drink orders at a coffee counter. Each drink requires several ingredients, and each ingredient is located at a different station around the screen.
 To start a step, you’ll click and drag one of the floating tentacles with your mouse and move it to the correct station. When the tentacle reaches the station, that station activates a continuous challenge. Each station has a different type of input—for example holding a key, tapping repeatedly, balancing a meter, or matching a rhythm.
 As the recipe progresses, new stations add new challenges, but the previous ones keep running. This means you’ll have to manage multiple inputs at the same time while also moving tentacles to new stations.
